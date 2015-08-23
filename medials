@@ -6,50 +6,97 @@
 if ($handle = opendir('.')) {
   while (false !== ($entry = readdir($handle))) {
     if ($entry != "." && $entry != "..") {
-      $file = process($entry);
-      printf("%-60.60s %20.20s %20.20s %20.20s",$file['filename'], $file['container'], $file['streamv'], $file['streama']);
+      $file = new MediaFile($entry);
+      echo $file->singleLine();
       echo "\n";
     }
   }
   closedir($handle);
 }
 
-function process($file) {
-  $run = "ffprobe -v quiet -print_format json -show_format -show_streams -select_streams u '$file'";
-  $fileinfo = shell_exec($run);
-  $fileinfo = json_decode($fileinfo);
-  $out = array(
-    'filename' => (isset($fileinfo->format->filename) ? $fileinfo->format->filename : $file),
-    'container' => $fileinfo->format->format_name,
-    'streamv' => array(),
-    'streama' => array()
-  );
+class MediaFile {
+  public $fileinfo = '';
+  public $filename;
+  public $streams = array();
+  function __construct($filename) {
+    $run = "ffprobe -v quiet -print_format json -show_format -show_streams -select_streams u '$filename'";
+    $fileinfo = shell_exec($run);
+    $fileinfo = json_decode($fileinfo);
+    $this->filename = $filename;
+    $this->fileinfo = $fileinfo;
+    if (count($fileinfo->streams)) {
+      foreach($fileinfo->streams as $stream) {
+        $newstream = new MediaStream($stream);
+        $this->streams[] = $newstream;
 
-  if (count($fileinfo->streams)) {
-    foreach($fileinfo->streams as $stream) {
-      if ($stream->codec_type == 'video') {
-        $stream->bit_rate = $stream->bit_rate / 1000000;
-        $out['streamv'][] = "{$stream->codec_name}({$stream->bit_rate}M)"; // max_bit_rate
-      } else if ($stream->codec_type == 'audio') {
-        $stream->bit_rate = $stream->bit_rate / 1000;
-        $out['streama'][] = "{$stream->codec_name}({$stream->bit_rate}K)";
       }
     }
   }
-  $out['streamv'] = implode(',',$out['streamv']);
-  $out['streama'] = implode(',',$out['streama']);
-  return $out;
+
+  function singleLine() {
+    $vstreams = MediaFile::formatStreams($this->getStreams('video'));
+    $astreams = MediaFile::formatStreams($this->getStreams('audio'));
+    return sprintf("%-60.60s %20.20s %20.20s %20.20s",$this->filename, $this->getContainer(), $vstreams, $astreams);
+  }
+
+  function getContainer() {
+    return $this->fileinfo->format->format_name;
+  }
+
+  function getStreams($filter) {
+    if (!count($this->streams)) {
+      return array();
+    }
+    $out = array();
+    foreach($this->streams as $stream) {
+      if ($stream->getType() == $filter) {
+        $out[] = $stream;
+      }
+    }
+    return $out;
+  }
+
+  static function formatStreams($streams) {
+    $out = array();
+    if (count($streams)) {
+      foreach ($streams as $stream) {
+        $out[] = $stream->getCodec() . "(" . $stream->getBitrate() . "K)";
+      }
+    }
+    $out = implode(',', $out);
+    return $out;
+  }
+
+}
+
+class MediaStream {
+  public $streamdata = NULL;
+  function __construct($stream) {
+    $this->streamdata = $stream;
+  }
+
+  function getType() {
+    return $this->streamdata->codec_type;
+  }
+
+  function getBitrate() {
+    $number = $this->streamdata->bit_rate;
+    return (int) ($number/1000);
+  }
+
+  function getCodec() {
+    return $this->streamdata->codec_name;
+  }
 }
 
 /*
 TODO
-- Refactor into class
 - More intelligent rate calculation (also handle vbr)
 - Filetype filtering (skip unknown files?)
 - Filesize reporting
 - Sort files (for now, pipe into sort)
 - Intelligent tabulation
 - Skip hidden files
-- Subtitle langages
+- Subtitle languages(?)
 - Do not regard png as video
 */
