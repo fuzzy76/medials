@@ -84,11 +84,16 @@ class MediaFile {
     $out = array();
     if (count($streams)) {
       foreach ($streams as $stream) {
-        $out[] = $stream->getCodec() . "(" . $stream->getBitrateFormatted() . ")";
+        $bitrate = $stream->getBitrateFormatted();
+        $out[] = $stream->getCodec() . ($bitrate ? "($bitrate)" : '');
       }
     }
     $out = implode(',', $out);
     return $out;
+  }
+
+  function __toString() {
+    return print_r($this, TRUE);
   }
 
 }
@@ -100,21 +105,42 @@ class MediaStream {
   }
 
   function getType() {
+    // @todo We probably want to override the type here for some imageformats
     return $this->streamdata->codec_type;
   }
 
   function getBitrateFormatted() {
-    $number = $this->streamdata->bit_rate;
+    $number = $this->getBitrate();
+    if (!$number)
+      return NULL;
     $sz = 'BKMGTP';
     $factor = floor((strlen($number) - 1) / 3);
     $out = round($number / pow(1024, $factor), 1);
     $letter = ($factor ? @$sz[$factor] : ''); // Skip first letter
-    return "{$out} {$letter}bit";
+    if ($out == 0)
+      echo $this;
+    return "{$out} {$letter}b";
+  }
+
+  function getBitrate() {
+    if (isset($this->streamdata->bit_rate))
+      return $this->streamdata->bit_rate;
+    if (isset($this->streamdata->max_bit_rate))
+      return $this->streamdata->max_bit_rate;
+    return NULL;
   }
 
   function getCodec() {
     return $this->streamdata->codec_name;
   }
+
+  function __toString() {
+    return print_r($this, TRUE);
+  }
+}
+
+function errorout($text, $data = '') {
+  echo "$text : $data\n";
 }
 
 /*
