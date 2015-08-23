@@ -5,7 +5,7 @@
 
 if ($handle = opendir('.')) {
   while (false !== ($entry = readdir($handle))) {
-    if ($entry != "." && $entry != "..") {
+    if (substr($entry,0,1) != '.' && (is_file($entry))) {
       $file = new MediaFile($entry);
       echo $file->singleLine();
       echo "\n";
@@ -19,7 +19,7 @@ class MediaFile {
   public $filename;
   public $streams = array();
   function __construct($filename) {
-    $run = "ffprobe -v quiet -print_format json -show_format -show_streams -select_streams u '$filename'";
+    $run = "ffprobe -v quiet -print_format json -show_format -show_streams -show_error -select_streams u '$filename'";
     $fileinfo = shell_exec($run);
     $fileinfo = json_decode($fileinfo);
     $this->filename = $filename;
@@ -36,7 +36,7 @@ class MediaFile {
   function singleLine() {
     $vstreams = MediaFile::formatStreams($this->getStreams('video'));
     $astreams = MediaFile::formatStreams($this->getStreams('audio'));
-    return sprintf("%-60.60s %20.20s %20.20s %20.20s",$this->filename, $this->getContainer(), $vstreams, $astreams);
+    return sprintf("%-60.60s %10s %20.20s %20.20s %20.20s",$this->filename, $this->guessType(), $this->getContainer(), $vstreams, $astreams);
   }
 
   function getContainer() {
@@ -56,11 +56,35 @@ class MediaFile {
     return $out;
   }
 
+  function countStreams($filter) {
+    if (!count($this->streams)) {
+      return 0;
+    }
+    $out = 0;
+    foreach($this->streams as $stream) {
+      if ($stream->getType() == $filter) {
+        $out++;
+      }
+    }
+    return $out;
+  }
+
+  function guessType() {
+    if ($this->countStreams('video'))
+      return 'video';
+
+    if ($this->countStreams('audio'))
+      return 'audio';
+
+    return 'other';
+
+  }
+
   static function formatStreams($streams) {
     $out = array();
     if (count($streams)) {
       foreach ($streams as $stream) {
-        $out[] = $stream->getCodec() . "(" . $stream->getBitrate() . "K)";
+        $out[] = $stream->getCodec() . "(" . $stream->getBitrateFormatted() . ")";
       }
     }
     $out = implode(',', $out);
@@ -79,9 +103,10 @@ class MediaStream {
     return $this->streamdata->codec_type;
   }
 
-  function getBitrate() {
+  function getBitrateFormatted() {
     $number = $this->streamdata->bit_rate;
-    return (int) ($number/1000);
+    $number =  (int) ($number/1000) ;
+    return $number."K";
   }
 
   function getCodec() {
@@ -99,4 +124,5 @@ TODO
 - Skip hidden files
 - Subtitle languages(?)
 - Do not regard png as video
+- Ignore folders
 */
