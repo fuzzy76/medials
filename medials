@@ -1,7 +1,20 @@
 #!/usr/bin/php
 <?php
 
-// ffprobe -v quiet -print_format json -show_format -show_streams -select_streams u Broken\ City.mkv
+/*
+medials
+List media files in a directory with media properties
+Håvard Pedersen (fuzzy76)
+
+TODO
+- Filetype filtering (skip unknown files?)
+- Filesize reporting
+- Sort files (for now, pipe into sort)
+- Intelligent tabulation
+- Subtitle languages(?)
+- Do not regard png as video
+- Ignore folders
+*/
 
 $mf = new MediaFolder('.');
 $mf->process();
@@ -23,7 +36,6 @@ class MediaFolder {
     foreach ($this->found as $file) {
       $mfile = new MediaFile($file);
       echo $mfile->singleLine();
-      echo "\n";
     }
   }
 
@@ -56,7 +68,7 @@ class MediaFile {
   function singleLine() {
     $vstreams = MediaFile::formatStreams($this->getStreams('video'));
     $astreams = MediaFile::formatStreams($this->getStreams('audio'));
-    return sprintf("%-60.60s %10s %20.20s %20.20s %20.20s",$this->filename, $this->guessType(), $this->getContainer(), $vstreams, $astreams);
+    return sprintf("%-60.60s %10.10s %10.10s %20.20s %20.20s",$this->filename, $this->guessType(), $this->getContainer(), $vstreams, $astreams) . "\n";
   }
 
   function getContainer() {
@@ -90,6 +102,15 @@ class MediaFile {
   }
 
   function guessType() {
+    $container2type = array(
+      'image2' => 'picture',
+    );
+
+    $container = $this->getContainer();
+    if (isset($container2type[$container])) {
+      return $container2type[$container];
+    }
+
     if ($this->countStreams('video'))
       return 'video';
 
@@ -126,6 +147,13 @@ class MediaStream {
 
   function getType() {
     // @todo We probably want to override the type here for some imageformats
+    $codec = $this->getCodec();
+    $codec2type = array(
+      'image2' => 'picture',
+    );
+    if (isset($codec2type[$codec])) {
+      return $codec2type[$codec];
+    }
     return $this->streamdata->codec_type;
   }
 
@@ -162,14 +190,3 @@ class MediaStream {
 function errorout($text, $data = '') {
   echo "$text : $data\n";
 }
-
-/*
-TODO
-- Filetype filtering (skip unknown files?)
-- Filesize reporting
-- Sort files (for now, pipe into sort)
-- Intelligent tabulation
-- Subtitle languages(?)
-- Do not regard png as video
-- Ignore folders
-*/
