@@ -29,6 +29,7 @@ class MediaFolder {
         }
       }
       closedir($handle);
+      sort($this->found);
     }
   }
 
