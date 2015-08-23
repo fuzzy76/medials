@@ -1,0 +1,55 @@
+#!/usr/bin/php
+<?php
+
+// ffprobe -v quiet -print_format json -show_format -show_streams -select_streams u Broken\ City.mkv
+
+if ($handle = opendir('.')) {
+  while (false !== ($entry = readdir($handle))) {
+    if ($entry != "." && $entry != "..") {
+      $file = process($entry);
+      printf("%-60.60s %20.20s %20.20s %20.20s",$file['filename'], $file['container'], $file['streamv'], $file['streama']);
+      echo "\n";
+    }
+  }
+  closedir($handle);
+}
+
+function process($file) {
+  $run = "ffprobe -v quiet -print_format json -show_format -show_streams -select_streams u '$file'";
+  $fileinfo = shell_exec($run);
+  $fileinfo = json_decode($fileinfo);
+  $out = array(
+    'filename' => (isset($fileinfo->format->filename) ? $fileinfo->format->filename : $file),
+    'container' => $fileinfo->format->format_name,
+    'streamv' => array(),
+    'streama' => array()
+  );
+
+  if (count($fileinfo->streams)) {
+    foreach($fileinfo->streams as $stream) {
+      if ($stream->codec_type == 'video') {
+        $stream->bit_rate = $stream->bit_rate / 1000000;
+        $out['streamv'][] = "{$stream->codec_name}({$stream->bit_rate}M)"; // max_bit_rate
+      } else if ($stream->codec_type == 'audio') {
+        $stream->bit_rate = $stream->bit_rate / 1000;
+        $out['streama'][] = "{$stream->codec_name}({$stream->bit_rate}K)";
+      }
+    }
+  }
+  $out['streamv'] = implode(',',$out['streamv']);
+  $out['streama'] = implode(',',$out['streama']);
+  return $out;
+}
+
+/*
+TODO
+- Refactor into class
+- More intelligent rate calculation (also handle vbr)
+- Filetype filtering (skip unknown files?)
+- Filesize reporting
+- Sort files (for now, pipe into sort)
+- Intelligent tabulation
+- Skip hidden files
+- Subtitle langages
+- Do not regard png as video
+*/
