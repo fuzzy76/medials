@@ -9,14 +9,13 @@ Håvard Pedersen (fuzzy76)
 TODO
 - Filetype filtering (skip unknown files?)
 - Filesize reporting
-- Sort files (for now, pipe into sort)
 - Intelligent tabulation
 - Subtitle languages(?)
-- Do not regard png as video
-- Ignore folders
+- Do not regard png as video streams
 */
 
-$mf = new MediaFolder('.');
+$folder = isset($argv[1]) ? $argv[1] : '.';
+$mf = new MediaFolder($folder);
 $mf->process();
 
 class MediaFolder {
@@ -24,12 +23,15 @@ class MediaFolder {
   function __construct($name) {
     if ($handle = opendir($name)) {
       while (false !== ($entry = readdir($handle))) {
-        if (substr($entry,0,1) != '.' && (is_file($entry))) { // Only process visible files
-          $this->found[] = $name . DIRECTORY_SEPARATOR . $entry;
+        $fullname = $name . DIRECTORY_SEPARATOR . $entry;
+        if (substr($entry,0,1) != '.' && (is_file($fullname))) { // Only process visible files
+          $this->found[] = $fullname;
         }
       }
       closedir($handle);
       sort($this->found);
+    } else {
+      echo "ERROR: Could not open directory!\n";
     }
   }
 
