@@ -3,16 +3,36 @@
 
 // ffprobe -v quiet -print_format json -show_format -show_streams -select_streams u Broken\ City.mkv
 
-if ($handle = opendir('.')) {
-  while (false !== ($entry = readdir($handle))) {
-    if (substr($entry,0,1) != '.' && (is_file($entry))) {
-      $file = new MediaFile($entry);
-      echo $file->singleLine();
+$mf = new MediaFolder('.');
+$mf->process();
+
+class MediaFolder {
+  public $found = array();
+  function __construct($name) {
+    if ($handle = opendir($name)) {
+      while (false !== ($entry = readdir($handle))) {
+        if (substr($entry,0,1) != '.' && (is_file($entry))) { // Only process visible files
+          $this->found[] = $name . DIRECTORY_SEPARATOR . $entry;
+        }
+      }
+      closedir($handle);
+    }
+  }
+
+  function process() {
+    foreach ($this->found as $file) {
+      $mfile = new MediaFile($file);
+      echo $mfile->singleLine();
       echo "\n";
     }
   }
-  closedir($handle);
+
+  function __toString() {
+    return print_r($this, TRUE);
+  }
+
 }
+
 
 class MediaFile {
   public $fileinfo = '';
@@ -22,7 +42,7 @@ class MediaFile {
     $run = "ffprobe -v quiet -print_format json -show_format -show_streams -show_error -select_streams u '$filename'";
     $fileinfo = shell_exec($run);
     $fileinfo = json_decode($fileinfo);
-    $this->filename = $filename;
+    $this->filename = basename($filename);
     $this->fileinfo = $fileinfo;
     if (count($fileinfo->streams)) {
       foreach($fileinfo->streams as $stream) {
@@ -145,12 +165,10 @@ function errorout($text, $data = '') {
 
 /*
 TODO
-- More intelligent rate calculation (also handle vbr)
 - Filetype filtering (skip unknown files?)
 - Filesize reporting
 - Sort files (for now, pipe into sort)
 - Intelligent tabulation
-- Skip hidden files
 - Subtitle languages(?)
 - Do not regard png as video
 - Ignore folders
