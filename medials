@@ -11,7 +11,13 @@ $folder = isset($argv[1]) ? $argv[1] : '.';
 $mf = new MediaFolder($folder);
 $mf->process();
 
-class MediaFolder {
+abstract class MediaBase {
+  function __toString() {
+    return print_r($this, TRUE);
+  }
+}
+
+class MediaFolder extends MediaBase {
   public $found = array();
   function __construct($name) {
     if ($handle = opendir($name)) {
@@ -35,14 +41,10 @@ class MediaFolder {
     }
   }
 
-  function __toString() {
-    return print_r($this, TRUE);
-  }
-
 }
 
 
-class MediaFile {
+class MediaFile extends MediaBase {
   public $fileinfo = '';
   public $filename;
   public $streams = array();
@@ -129,13 +131,9 @@ class MediaFile {
     return $out;
   }
 
-  function __toString() {
-    return print_r($this, TRUE);
-  }
-
 }
 
-class MediaStream {
+class MediaStream extends MediaBase {
   public $streamdata = NULL;
   function __construct($stream) {
     $this->streamdata = $stream;
@@ -178,11 +176,4 @@ class MediaStream {
     return $this->streamdata->codec_name;
   }
 
-  function __toString() {
-    return print_r($this, TRUE);
-  }
-}
-
-function errorout($text, $data = '') {
-  echo "$text : $data\n";
 }
