@@ -5,13 +5,6 @@
 medials
 List media files in a directory with media properties
 Håvard Pedersen (fuzzy76)
-
-TODO
-- Filetype filtering (skip unknown files?)
-- Filesize reporting
-- Intelligent tabulation
-- Subtitle languages(?)
-- Do not regard png as video streams
 */
 
 $folder = isset($argv[1]) ? $argv[1] : '.';

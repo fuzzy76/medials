@@ -1,9 +1,7 @@
 # medials
 List media files in a directory with media properties (type, container, codecs and bitrate)
 
-Require ffprobe installed in path
-
-Very basic, todo at top of sourcecode :)
+Require php5 and ffprobe installed in path
 
 Example output:
 
