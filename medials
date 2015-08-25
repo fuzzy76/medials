@@ -11,14 +11,33 @@ $folder = isset($argv[1]) ? $argv[1] : '.';
 $mf = new MediaFolder($folder);
 $mf->process();
 
+/**
+ * Class MediaBase
+ * Base class for all objects
+ */
 abstract class MediaBase {
+  /**
+   * Generic __toString()
+   * @return string
+   */
   function __toString() {
     return print_r($this, TRUE);
   }
 }
 
+/**
+ * Class MediaFolder
+ * Handles a class of mediafiles
+ */
 class MediaFolder extends MediaBase {
+  /**
+   * @var array Full path to all files within
+   */
   public $found = array();
+
+  /**
+   * @param $name string Folder path
+   */
   function __construct($name) {
     if ($handle = opendir($name)) {
       while (false !== ($entry = readdir($handle))) {
@@ -34,6 +53,9 @@ class MediaFolder extends MediaBase {
     }
   }
 
+  /**
+   * Process folder, listing all contents
+   */
   function process() {
     foreach ($this->found as $file) {
       $mfile = new MediaFile($file);
@@ -44,10 +66,27 @@ class MediaFolder extends MediaBase {
 }
 
 
+/**
+ * Class MediaFile
+ * Handles a single media file
+ */
 class MediaFile extends MediaBase {
+  /**
+   * @var mixed decoded data from ffprobe
+   */
   public $fileinfo = '';
+  /**
+   * @var string filename
+   */
   public $filename;
+  /**
+   * @var array array of stream objects
+   */
   public $streams = array();
+
+  /**
+   * @param string $filename analyze a media file
+   */
   function __construct($filename) {
     $run = "ffprobe -v quiet -print_format json -show_format -show_streams -show_error -select_streams u '$filename'";
     $fileinfo = shell_exec($run);
@@ -63,16 +102,29 @@ class MediaFile extends MediaBase {
     }
   }
 
+  /**
+   * Output a one-line representation of this file
+   * @return string
+   */
   function singleLine() {
     $vstreams = MediaFile::formatStreams($this->getStreams('video'));
     $astreams = MediaFile::formatStreams($this->getStreams('audio'));
     return sprintf("%-60.60s %10.10s %10.10s %20.20s %20.20s",$this->filename, $this->guessType(), $this->getContainer(), $vstreams, $astreams) . "\n";
   }
 
+  /**
+   * Get container format of file
+   * @return mixed
+   */
   function getContainer() {
     return $this->fileinfo->format->format_name;
   }
 
+  /**
+   * Get the streams of a given type
+   * @param string|null $filter the streamtype to filter by
+   * @return array Array of stream objects
+   */
   function getStreams($filter) {
     if (!count($this->streams)) {
       return array();
@@ -86,6 +138,11 @@ class MediaFile extends MediaBase {
     return $out;
   }
 
+  /**
+   * Count streams of a given type
+   * @param string|null $filter the streamtype to filter by
+   * @return int number of matching streams
+   */
   function countStreams($filter) {
     if (!count($this->streams)) {
       return 0;
@@ -99,6 +156,10 @@ class MediaFile extends MediaBase {
     return $out;
   }
 
+  /**
+   * Guess the mediatype in this file
+   * @return string a type of 'video', 'audio', 'picture' or 'other'
+   */
   function guessType() {
     $container2type = array(
       'image2' => 'picture',
@@ -119,6 +180,11 @@ class MediaFile extends MediaBase {
 
   }
 
+  /**
+   * Return a printable representation of an array of stream objects
+   * @param array $streams
+   * @return string
+   */
   static function formatStreams($streams) {
     $out = array();
     if (count($streams)) {
@@ -133,14 +199,29 @@ class MediaFile extends MediaBase {
 
 }
 
+/**
+ * Class MediaStream
+ * A class representing a single media stream
+ */
 class MediaStream extends MediaBase {
+  /**
+   * @var array Stream data
+   */
   public $streamdata = NULL;
+
+  /**
+   * Create object based on stream info
+   * @param $stream
+   */
   function __construct($stream) {
     $this->streamdata = $stream;
   }
 
+  /**
+   * Get type of stream
+   * @return string
+   */
   function getType() {
-    // @todo We probably want to override the type here for some imageformats
     $codec = $this->getCodec();
     $codec2type = array(
       'image2' => 'picture',
@@ -151,6 +232,10 @@ class MediaStream extends MediaBase {
     return $this->streamdata->codec_type;
   }
 
+  /**
+   * Get text formatted bitrate
+   * @return string|null
+   */
   function getBitrateFormatted() {
     $number = $this->getBitrate();
     if (!$number)
@@ -164,6 +249,10 @@ class MediaStream extends MediaBase {
     return "{$out} {$letter}b";
   }
 
+  /**
+   * Get bitrate
+   * @return int|null
+   */
   function getBitrate() {
     if (isset($this->streamdata->bit_rate))
       return $this->streamdata->bit_rate;
@@ -172,6 +261,10 @@ class MediaStream extends MediaBase {
     return NULL;
   }
 
+  /**
+   * Get codec of stream
+   * @return string
+   */
   function getCodec() {
     return $this->streamdata->codec_name;
   }
