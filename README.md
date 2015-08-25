@@ -7,6 +7,6 @@ Example output:
 
 ```
 [fuzzy76@nst-hpmba:medials (master)]$ ./medials /Volumes/Ekstra/
-DrupalCon Los Angeles 2015_ Revamping the project applicatio      video mov,mp4,m4         h264(1.8 Mb)        aac(245.7 Kb)
-evernote_backup.enex                                              other
+DrupalCon Los Angeles 2015_ Revamping the project.mp4 video mov,mp4,m4 h264(1.8 Mb) aac(245.7 Kb)
+evernote_backup.enex                                             other
 ```
